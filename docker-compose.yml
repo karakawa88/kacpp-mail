@@ -1,0 +1,20 @@
+version: "3"
+
+services:
+    kacpp-postgres:
+        image: kagalpandh/kacpp-postgres
+        container_name: kacpp-postgres
+        volumes:
+            - /home/data:/home/data
+        networks:
+            - kaawsnet
+        ports:
+            - 5432:5432
+        restart: always
+        environment:
+            PGDATA: /home/data/db/pgdata
+networks:
+    kaawsnet:
+        external: true
+
+
