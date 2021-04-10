@@ -24,7 +24,7 @@ fi
 #
 function str_useradd() {
     local str=$1
-    local user=$(echo $str | sed -r 's/^(.*):[0-9]+$/\1/')
+    local user=$(echo $str | sed -r 's/^([-_0-9a-zA-Z#]+):[0-9]+$/\1/')
     local passwd=$(echo $str | sed -r 's/^.*:(.*):[0-9]+$/\1/')
     local user_id=$(echo $str | sed -r 's/^.*:.*:([0-9]+)$/\1/')
 
