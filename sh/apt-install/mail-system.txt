@@ -11,3 +11,6 @@ libsasl2-modules-sql
 # Postfix
 libdb5.3
 libdb5.3++
+# SSL CA証明書
+ca-certificates
+
