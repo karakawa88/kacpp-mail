@@ -1,0 +1,13 @@
+# PostgreSQL
+libpq5
+libpqxx-6.2
+# MySQL
+default-mysql-client
+# Cyrus-SASL
+libsasl2-2
+libsasl2-modules
+libsasl2-modules-db
+libsasl2-modules-sql
+# Postfix
+libdb5.3
+libdb5.3++
