@@ -4,61 +4,81 @@ FROM        kagalpandh/kacpp-gccdev AS builder
 SHELL       [ "/bin/bash", "-c" ]
 WORKDIR     /root
 ENV         DEBIAN_FORONTEND=noninteractive
-ENV         POSTGRES_VERSION=13.2
-ENV         POSTGRES_SRC=postgresql-${POSTGRES_VERSION}
-ENV         POSTGRES_SRC_FILE=${POSTGRES_SRC}.tar.bz2
-ENV         POSTGRES_URL="https://ftp.postgresql.org/pub/source/v${POSTGRES_VERSION}/${POSTGRES_SRC_FILE}"
-ENV         POSTGRES_DEST=${POSTGRES_SRC}
-ENV         PGHOME=/usr/local/${PYTHON_DEST}
-ENV         PATH=${PYTHON_HOME}/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
-ENV         LD_LIBRARY_PATH=${PYTHON_HOME}/lib
+ENV         MSMTP_VERSION=1.8.15
+ENV         MSMTP_SRC=msmtp-${MSMTP_VERSION}
+ENV         MSMTP_SRC_FILE=${MSMTP_SRC}.tar.xz
+ENV         MSMTP_URL="https://marlam.de/msmtp/releases/${MSMTP_SRC_FILE}"
+ENV         MSMTP_DEST=${MSMTP_SRC}
+ENV         CYRUS_VERSION=2.1.27
+ENV         CYRUS_SRC=cyrus-sasl-${CYRUS_VERSION}
+ENV         CYRUS_SRC_FILE=${CYRUS_SRC}.tar.gz
+ENV         CYRUS_URL="https://github.com/cyrusimap/cyrus-sasl/archive/refs/tags/${CYRUS_SRC_FILE}"
+ENV         CYRUS_DEST=${CYRUS_SRC}
+COPY        sh/apt-install/mail-system.txt /usr/local/sh/apt-install
+# https://github.com/cyrusimap/cyrus-sasl/archive/refs/tags/cyrus-sasl-2.1.27.zip
 # 開発環境インストール
-RUN         apt update \
-            && /usr/local/sh/system/apt-install.sh install gccdev.txt \
-            && wget ${POSTGRES_URL} && tar -jxvf ${POSTGRES_SRC_FILE} && cd ${POSTGRES_SRC} \
-                &&  ./configure --prefix=/usr/local/${POSTGRES_DEST} --enable-shared --with-openssl \
-                && make && make install  \
-                && cd contrib/pgcrypto && make && make install \
-            && /usr/local/sh/system/apt-install.sh uninstall gccdev.txt \
-                && apt autoremove -y && apt clean && rm -rf /var/lib/apt/lists/* \
-                && cd ../ && rm -rf ${POSTGRES_DEST}*
+RUN         apt update && \
+            /usr/local/sh/system/apt-install.sh install gccdev.txt && \
+            # msmtpビルド
+            # ./configure --prefix=... && make && make install
+            wget ${MSMTP_URL} && tar -Jxvf ${MSMTP_SRC_FILE} && cd ${MSMTP_SRC} && \
+                ./configure --prefix=/usr/local/${MSMTP_DEST} && \
+                make && make install
+            # cyrus-saslビルド
+            # ./configure
+            # make && make install
+RUN         /usr/local/sh/system/apt-install.sh install mail-system-dev.txt
+# ftp://ftp.porcupine.org/mirrors/project-history/postfix/official/postfix-3.5.2.tar.gz
+# Postfixビルドとインストール
+ENV         POSTFIX_VERSION=3.5.2
+ENV         POSTFIX_SRC=postfix-${POSTFIX_VERSION}
+ENV         POSTFIX_SRC_FILE=${POSTFIX_SRC}.tar.gz
+ENV         POSTFIX_URL="ftp://ftp.porcupine.org/mirrors/project-history/postfix/official/${POSTFIX_SRC_FILE}"
+ENV         POSTFIX_DEST=${POSTFIX_SRC}
+RUN         wget ${POSTFIX_URL} && tar -zxvf ${POSTFIX_SRC_FILE} && cd ${POSTFIX_SRC} && \
+                make makefiles CCARGS="-DUSE_TLS -DUSE_SASL_AUTH -DUSE_CYRUS_SASL -I/usr/include/sasl" \
+                AUXLIBS="-L/usr/local/lib -lsasl2 -lssl -lcrypto" && \
+                make && \
+                mkdir /usr/local/${POSTFIX_DEST} && \
+                make non-interactive-package install_root="/usr/local/${POSTFIX_DEST}" && \
+            # クリーンアップ
+            /usr/local/sh/system/apt-install.sh uninstall gccdev.txt && \
+                apt autoremove -y && apt clean && rm -rf /var/lib/apt/lists/* && \
+                cd ../ && rm -rf ${MSMTP_SRC}*
 FROM        kagalpandh/kacpp-pydev
 SHELL       [ "/bin/bash", "-c" ]
 WORKDIR     /root
 USER        root
-EXPOSE      5432
-VOLUME      ["/home/data"]
-ENV         POSTGRES_VERSION=13.2
-ENV         POSTGRES_DEST=postgresql-${POSTGRES_VERSION}
-#PostgreSQL用環境変数
-ENV         PGHOME=/usr/local/${POSTGRES_DEST}
-ENV         PGDATA=/home/data/pgdata
-ENV         PATH=${PGHOME}/bin:/usr/local/python/bin:/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin:/bin:/sbin
-#postgresユーザー・グループ
-ENV         PG_GROUP=postgres
-ENV         PG_USER=postgres
-ENV         PG_GID=990
-ENV         PG_UID=1008
-RUN         mkdir /usr/local/${POSTGRES_DEST}
-COPY        --from=builder /usr/local/${POSTGRES_DEST}/ /usr/local/${POSTGRES_DEST}
-COPY        rcprofile /etc/rc.d
+EXPOSE      25 587 465 2525
+VOLUME      ["/home/mail_users", "/usr/local/etc"]
+# メールクライアントMSMTP用環境変数
+ENV         MSMTP_VERSION=1.8.15
+ENV         MSMTP_DEST=msmtp-${MSMTP_VERSION}
+# Postfix用環境変数
+ENV         POSTFIX_VERSION=3.5.2
+ENV         POSTFIX_SRC=postfix-${POSTFIX_VERSION}
+ENV         POSTFIX_DEST=${POSTFIX_SRC}
+# Postfix用ユーザー・グループ
+ENV         POSTFIX_GROUP=postfix
+ENV         POSTDROP=postdrop
+ENV         POSTFIX_USER=postfix
+ENV         PF_GID=996
+ENV         PD_GID=997
+ENV         PF_UID=1003
+RUN         mkdir /var/spool/postfix && mkdir /var/lib/postfix
+COPY        --from=builder /usr/local/${MSMTP_DEST}/ /usr/local
+COPY        --from=builder /usr/local/${POSTFIX_DEST}/usr/ /usr/local
+COPY        --from=builder /usr/local/${POSTFIX_DEST}/etc/ /usr/local/etc
+COPY        --from=builder /usr/local/var/spool/postfix/ /var/spool/postfix
+COPY        .msmtprc /root
 RUN         apt update && \
-#   porgでPythonをパッケージ管理
-#             chown -R root.root /usr/local && \
-#             find ${PYTHON_HOME} -type f -print | xargs porg -l -p ${PYTHON_DEST} && \
-            mkdir /home/data && chown root.root /home/data && chmod 755 /home/data && \
-            ln -s ${PGHOME} /usr/local/postgres && \
-            echo "${PGHOME}/lib" >>/etc/ld.so.conf && ldconfig && \
-            groupadd -g ${PG_GID} ${PG_GROUP} && \
-                useradd -u ${PG_UID} -m -d /home/${PG_USER} -s /bin/bash -g ${PG_GROUP} \ 
-                -G ${PG_GROUP} ${PG_USER} && \
-            chown -R ${PG_USER}.${PG_GROUP} /usr/local/${PGDEST} && \
-                mkdir /var/log/postgres && chown -R ${PG_USER}.${PG_GROUP} /var/log/postgres && \ 
-                chmod 750 /var/log/postgres && \
+            /usr/local/sh/system/apt-install.sh install mail-system.txt && \
+            mkdir /var/log/mail && chown root.mail /var/log/mail && chmod 3775 /var/log/mail && ldconfig && \
+            mkdir /home/mail_users && chown root.mail /home/mail_users && \
+                chmod 3775 /home/mail_users && \
+            # Postfixユーザー・グループ作成
+            groupadd -g ${PF_GID} ${POSTFIX_GROUP} && groupadd -g ${PD_GID} ${POSTDROP} && \
+                useradd -u ${PF_UID} -s /bin/false -d /dev/null -g ${PF_UID} \
+                    -G "${POSTFIX_GROUP},${POSTDROP}" ${POSTFIX_USER} && \
+                chown -R ${POSTFIX_USER}.${POSTFIX_GROUP} /var/spool/postfix && \
             cd ~/ && apt clean && rm -rf /var/lib/apt/lists/*
-RUN         mkdir -p /usr/local/sh/postgres
-COPY        postgres-entrypoint.sh /usr/local/sh/postgres/postgres-entrypoint.sh
-RUN         chown -R ${PG_USER}.${PG_GROUP} /usr/local/sh/postgres && \ 
-                chmod 3775 /usr/local/sh/postgres && \
-                chmod 775 /usr/local/sh/postgres/postgres-entrypoint.sh
-ENTRYPOINT  /usr/local/sh/postgres/postgres-entrypoint.sh
