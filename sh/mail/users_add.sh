@@ -25,13 +25,14 @@ fi
 function str_useradd() {
     local str=$1
     local user=$(echo $str | sed -r 's/^(.*):[0-9]+:.*$/\1/')
-    local user_id=$(echo $str | sed -r 's/^.*:([0-9]+):.*$/\1/')
-    local user_comment=$(echo $str | sed -r 's/^.*:([0-9]+):(.*)$/\1/')
+    local passwd=$(echo $str | sed -r 's/^.*:(.*):[0-9]+:.*$/\1/')
+    local user_id=$(echo $str | sed -r 's/^.*:.*:([0-9]+):.*$/\1/')
 
     cat /etc/passwd | grep -q "^${user}" >/dev/null 2&>1
     if [[ $? != 0 ]]; then
         useradd -M -u $user_id -s $sh -d ${mail_users_dir}/${user} \
-                    -g $mail_group -G $mail_group -c $user_comment $user
+                    -g $mail_group -G $mail_group $user
+        echo "${user}:${passwd}" | chpasswd
     fi
     return 0
 }
