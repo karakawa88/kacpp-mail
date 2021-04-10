@@ -24,11 +24,11 @@ fi
 #
 function str_useradd() {
     local str=$1
-    local user=$(echo $str | sed -r 's/^([-_0-9a-zA-Z#]+):[0-9]+$/\1/')
+    local user=$(echo $str | sed -r 's/^([-_0-9a-zA-Z#]+):.*:[0-9]+$/\1/')
     local passwd=$(echo $str | sed -r 's/^.*:(.*):[0-9]+$/\1/')
     local user_id=$(echo $str | sed -r 's/^.*:.*:([0-9]+)$/\1/')
 
-    cat /etc/passwd | grep -q "^${user}" >/dev/null 2&>1
+    cat /etc/passwd | grep -E -q "^${user}" >/dev/null 2>&1
     if [[ $? != 0 ]]; then
         useradd -M -u $user_id -s $sh -d ${mail_users_dir}/${user} \
                     -g $mail_group -G $mail_group $user
@@ -39,6 +39,10 @@ function str_useradd() {
 
 cat users.txt | while read line
 do
+    echo $line | grep -E -q '^#|^[ \t]*$' >/dev/null 2>&1
+    if [[ $? == 0 ]]; then
+        continue
+    fi
     str_useradd $line
 done
 

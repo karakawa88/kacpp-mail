@@ -65,12 +65,14 @@ ENV         POSTFIX_USER=postfix
 ENV         PF_GID=996
 ENV         PD_GID=997
 ENV         PF_UID=1003
+ENV         IDENT_TRUST_CERT=lets-encrypt-r3-cross-signed.pem
 RUN         mkdir /var/spool/postfix && mkdir /var/lib/postfix
 COPY        --from=builder /usr/local/${MSMTP_DEST}/ /usr/local
 COPY        --from=builder /usr/local/${POSTFIX_DEST}/usr/ /usr/local
 COPY        --from=builder /usr/local/${POSTFIX_DEST}/etc/ /usr/local/etc
 COPY        --from=builder /usr/local/var/spool/postfix/ /var/spool/postfix
 COPY        .msmtprc /root
+# https://letsencrypt.org/certs/lets-encrypt-r3-cross-signed.pem
 RUN         apt update && \
             /usr/local/sh/system/apt-install.sh install mail-system.txt && \
             mkdir /var/log/mail && chown root.mail /var/log/mail && chmod 3775 /var/log/mail && ldconfig && \
@@ -81,4 +83,8 @@ RUN         apt update && \
                 useradd -u ${PF_UID} -s /bin/false -d /dev/null -g ${PF_UID} \
                     -G "${POSTFIX_GROUP},${POSTDROP}" ${POSTFIX_USER} && \
                 chown -R ${POSTFIX_USER}.${POSTFIX_GROUP} /var/spool/postfix && \
+            # SSLで大抵LetsEncryptを使用するためISRGが署名した証明書を配置しなくてはならない。
+            # しかしISRGの証明書は大抵の暗いアアントにはないのでIdentTrustの署名した証明書を使用する。
+            wget https://letsencrypt.org/certs/${IDENT_TRUST_CERT} && \
+            cp ${IDENT_TRUST_CERT} /etc/ssl/certs && chmod 644 /etc/ssl/certs/${IDENT_TRUST_CERT} && \
             cd ~/ && apt clean && rm -rf /var/lib/apt/lists/*
