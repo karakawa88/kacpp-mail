@@ -37,7 +37,7 @@ function str_useradd() {
     return 0
 }
 
-cat users.txt | while read line
+cat $USERS_LIST | while read line
 do
     echo $line | grep -E -q '^#|^[ \t]*$' >/dev/null 2>&1
     if [[ $? == 0 ]]; then
