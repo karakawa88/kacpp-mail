@@ -1,18 +1,27 @@
 version: "3"
 
+# docker run --privileged -dit --name kacpp-mail --net kaawsnet -p 25:25 -p 465:465 -p 587:587 -v /home:/home/mail_users -v /home/local_etc:/usr/local/etc kagalpandh/kacpp-mail
+
 services:
-    kacpp-postgres:
-        image: kagalpandh/kacpp-postgres
-        container_name: kacpp-postgres
+    kacpp-mail:
+        image: kagalpandh/kacpp-mail
+        container_name: kacpp-mail
         volumes:
-            - /home/data:/home/data
+            - /home/local_etc:/usr/local/etc
+            - /home:/home/mail_users
+            - /sys/fs/cgroup:/sys/fs/cgroup:ro
         networks:
             - kaawsnet
         ports:
-            - 5432:5432
+            - 25:25
+            - 465:465
+            - 587:587
+        cap_add:
+            - SYS_ADMIN
+        privileged: true
         restart: always
-        environment:
-            PGDATA: /home/data/db/pgdata
+#         environment:
+#             PGDATA: /home/data/db/pgdata
 networks:
     kaawsnet:
         external: true

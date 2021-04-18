@@ -1,5 +1,7 @@
 # rsyslog
 rsyslog
+#systemd
+systemd
 # PostgreSQL
 libpq5
 libpqxx-6.2
