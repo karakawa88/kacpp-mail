@@ -40,9 +40,18 @@ RUN         wget ${POSTFIX_URL} && tar -zxvf ${POSTFIX_SRC_FILE} && cd ${POSTFIX
                 AUXLIBS="-L/usr/local/lib -lsasl2 -lssl -lcrypto" && \
                 make && \
                 mkdir /usr/local/${POSTFIX_DEST} && \
-                make non-interactive-package install_root="/usr/local/${POSTFIX_DEST}" && \
-            # クリーンアップ
-            /usr/local/sh/system/apt-install.sh uninstall gccdev.txt && \
+                make non-interactive-package install_root="/usr/local/${POSTFIX_DEST}"
+# OpenDMARCのビルド
+# URL: https://sourceforge.net/projects/opendmarc/files/opendmarc-1.3.2.tar.gz/download
+ENV         OPENDMARC_VERSION=1.3.2
+ENV         OPENDMARC_SRC=opendmarc-${OPENDMARC_VERSION}
+ENV         OPENDMARC_SRC_FILE=${OPENDMARC_SRC}.tar.gz
+ENV         OPENDMARC_URL=https://sourceforge.net/projects/opendmarc/files/${OPENDMARC_SRC_FILE}/download
+ENV         OPENDMARC_DEST=${OPENDMARC_SRC}
+RUN         wget ${OPENDMARC_URL} && tar -zxvf ${OPENDMARC_SRC_FILE} && cd ${OPENDMARC_SRC} && \
+            ./configure --prefix=/usr/local/${OPENDMARC_DEST} && make && make install
+# クリーンアップ
+RUN         /usr/local/sh/system/apt-install.sh uninstall gccdev.txt && \
                 apt autoremove -y && apt clean && rm -rf /var/lib/apt/lists/* && \
                 cd ../ && rm -rf ${MSMTP_SRC}*
 FROM        kagalpandh/kacpp-pydev
@@ -69,10 +78,14 @@ ENV         PF_GID=996
 ENV         PD_GID=997
 ENV         PF_UID=1003
 ENV         IDENT_TRUST_CERT=lets-encrypt-r3-cross-signed.pem
+# OpenDMARC環境変数
+ENV         OPENDMARC_VERSION=1.3.2
+ENV         OPENDMARC_DEST=opendmarc-${OPENDMARC_VERSION}
 RUN         mkdir /var/spool/postfix && mkdir /var/lib/postfix
 COPY        --from=builder /usr/local/${MSMTP_DEST}/ /usr/local
 COPY        --from=builder /usr/local/${POSTFIX_DEST}/usr/ /usr/local
 COPY        --from=builder /usr/local/${POSTFIX_DEST}/etc/ /usr/local/etc
+COPY        --from=builder /usr/local/${OPENDMARC_DEST}/ /usr/local/
 # COPY        --from=builder /usr/local/var/spool/postfix/ /var/spool/postfix
 COPY        sh/  /usr/local/sh
 COPY        supervisord.conf /root
@@ -103,7 +116,7 @@ RUN         groupadd -g ${PF_GID} ${POSTFIX_GROUP} && groupadd -g ${PD_GID} ${PO
                 chmod 2755 /usr/local/sbin/postdrop && \
             # エイリアス
             test -r /etc/aliases && rm -rf /etc/aliases && \
-            ln -s /usr/local/etc/aliases /etc/aliases && \
+                ln -s /usr/local/etc/aliases /etc/aliases && \
                 ln -s /usr/local/etc/aliases.db /etc/aliases.db && \
             # SMTP-AUTH
             # 通常SASLの設定ファイルsmtpd.confは/usr/lib/sasl2にあるが
@@ -114,9 +127,34 @@ RUN         groupadd -g ${PF_GID} ${POSTFIX_GROUP} && groupadd -g ${PD_GID} ${PO
             # しかしISRGの証明書は大抵の暗いアアントにはないのでIdentTrustの署名した証明書を使用する。
             wget https://letsencrypt.org/certs/${IDENT_TRUST_CERT} && \
                 cp ${IDENT_TRUST_CERT} /etc/ssl/certs && chmod 644 /etc/ssl/certs/${IDENT_TRUST_CERT}
-            # Supervisor 複数のプロセスを管理する
-            # 複数のサービスを管理するためsupervisorを使用する
 #             dpkg --configure -a -y && \
+# OpenDKIMの設定
+ENV         OPENDKIM_UID=113
+ENV         OPENDKIM_GID=120
+ENV         OPENDKIM_USER=opendkim
+ENV         OPENDKIM_GROUP=opendkim
+# OpenDKIMはAPTで入れておりユーザーとグループopendkimは既に作成されているためコメントアウト
+#RUN         groupadd -g ${OPENDKIM_GID} ${OPENDKIM_GROUP} && \
+# RUN         useradd -r -u ${OPENDKIM_UID} -s /bin/false -d /dev/null \
+#                     -g ${OPENDKIM_GROUP} -G ${OPENDKIM_GROUP} ${OPENDKIM_USER} && \
+# /var/run/opendkimも既に作成されているためコメントアウト
+# RUN         mkdir /var/run/opendkim && \
+RUN         chown opendkim.postfix /var/run/opendkim && \
+                chmod 3775 /var/run/opendkim
+# OpenDMARCの配置と設定
+ENV         OPENDMARC_UID=1004
+ENV         OPENDMARC_GID=994
+ENV         OPENDMARC_USER=opendmarc
+ENV         OPENDMARC_GROUP=opendmarc
+RUN         groupadd -g ${OPENDMARC_GID} ${OPENDMARC_GROUP} && \
+                useradd -u ${OPENDMARC_UID} -s /bin/false -d /dev/null \
+                    -g ${OPENDMARC_GROUP} -G ${OPENDMARC_GROUP} ${OPENDMARC_USER} && \
+                mkdir /var/run/opendmarc && chown opendmarc.postfix /var/run/opendmarc && \
+                chmod 3775 /var/run/opendmarc && \
+                mkdir /var/spool/opendmarc && chown opendmarc.opendmarc /var/spool/opendmarc && \
+                chmod 3775 /var/spool/opendmarc && ldconfig
+# Supervisor 複数のプロセスを管理する
+# 複数のサービスを管理するためsupervisorを使用する
 RUN         apt install -y supervisor && \
                 cp supervisord.conf /etc && \
             # ENTRYPOINT

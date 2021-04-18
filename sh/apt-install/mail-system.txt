@@ -17,4 +17,8 @@ libdb5.3
 libdb5.3++
 # SSL CA証明書
 ca-certificates
+# OpenDKIM
+libmilter1.0.1
+opendkim
+opendkim-tools
 

@@ -19,4 +19,7 @@ libdb5.3
 libdb5.3-dev
 libdb5.3++
 libdb5.3++-dev
+# OpenDMARC
+libmilter1.0.1
+libmilter-dev
 
