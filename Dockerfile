@@ -92,12 +92,12 @@ COPY        supervisord.conf /root
 COPY        .msmtprc /root
 # https://letsencrypt.org/certs/lets-encrypt-r3-cross-signed.pem
 RUN         apt update && \
-            /usr/local/sh/system/apt-install.sh install mail-system.txt && \
             # rsyslog
             groupadd -g ${SYSLOG_GID} syslog && \
                 useradd -u ${SYSLOG_UID} -s /bin/false -d /dev/null -g syslog -G syslog syslog && \
                 chown -R root.syslog /var/log && chmod 3775 /var/log && \
             mkdir /var/log/mail && chown root.mail /var/log/mail && chmod 3775 /var/log/mail && ldconfig && \
+            /usr/local/sh/system/apt-install.sh install mail-system.txt && \
 #             mkdir /home/mail_users && \
             chown root.mail /home/mail_users && \
                 chmod 3775 /home/mail_users
@@ -155,11 +155,15 @@ RUN         groupadd -g ${OPENDMARC_GID} ${OPENDMARC_GROUP} && \
                 chmod 3775 /var/spool/opendmarc && ldconfig
 # Supervisor 複数のプロセスを管理する
 # 複数のサービスを管理するためsupervisorを使用する
-RUN         apt install -y supervisor && \
-                cp supervisord.conf /etc && \
-            # ENTRYPOINT
-            chmod 775 /usr/local/sh/system/mail-system.sh && \
+# RUN         apt install -y supervisor && \
+#                 cp supervisord.conf /etc && \
+#systemdの設定
+COPY        systemd/system/  /etc/systemd/system/
+# ENTRYPOINTとクリーンアップ
+COPY        sh/system/mail-system.sh /usr/local/sh/system
+COPY        sh/mail/users_add.sh /usr/local/sh/mail
+RUN         chmod 775 /usr/local/sh/system/mail-system.sh && \
             cd ~/ && apt clean && rm -rf /var/lib/apt/lists/* && rm *
 COPY        rsyslog.conf /etc
 COPY        default.conf /etc/rsyslog.d
-# ENTRYPOINT  ["/usr/local/sh/system/mail-system.sh"]
+ENTRYPOINT  ["/usr/local/sh/system/mail-system.sh"]
