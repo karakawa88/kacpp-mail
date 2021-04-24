@@ -163,9 +163,10 @@ RUN         groupadd -g ${OPENDMARC_GID} ${OPENDMARC_GROUP} && \
 COPY        systemd/system/  /etc/systemd/system/
 COPY        tmpfiles.d/     /etc/tmpfiles.d/
 # ENTRYPOINTとクリーンアップ
-COPY        sh/system/mail-system.sh /usr/local/sh/system
-COPY        sh/mail/users_add.sh /usr/local/sh/mail
-RUN         chmod 775 /usr/local/sh/system/mail-system.sh && \
+COPY        sh/system/ /usr/local/sh/system
+COPY        sh/mail/ /usr/local/sh/mail
+RUN         chmod 775 /usr/local/sh/system/*.sh && \
+            chmod 775 /usr/local/sh/mail/*.sh && \
             # なぜかSMTPサーバーexim4が入っておりそれが起動してpostfixの邪魔になるので削除
             apt remove --purge -y exim4-daemon-light exim4-daemon-heavy && \
             cd ~/ && apt clean && rm -rf /var/lib/apt/lists/* && rm *

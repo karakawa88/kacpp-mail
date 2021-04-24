@@ -18,10 +18,5 @@ fi
 # /usr/sbin/supervisord
 
 exec /sbin/init 
-# systemctl daemon-reload
-# systemctl start saslauthd
-# systemctl start opendkim
-# systemctl start opendmarc
-# systemctl start postfix
 
 
