@@ -126,7 +126,16 @@ RUN         groupadd -g ${PF_GID} ${POSTFIX_GROUP} && groupadd -g ${PD_GID} ${PO
             # SSLで大抵LetsEncryptを使用するためISRGが署名した証明書を配置しなくてはならない。
             # しかしISRGの証明書は大抵の暗いアアントにはないのでIdentTrustの署名した証明書を使用する。
             wget https://letsencrypt.org/certs/${IDENT_TRUST_CERT} && \
-                cp ${IDENT_TRUST_CERT} /etc/ssl/certs && chmod 644 /etc/ssl/certs/${IDENT_TRUST_CERT}
+                cp ${IDENT_TRUST_CERT} /etc/ssl/certs && \
+                chmod 644 /etc/ssl/certs/${IDENT_TRUST_CERT} && \
+            # SPF 受信側の検証 postfix pypolicyd-spf
+            pip3 install py3dns && \
+            pip3 install pyspf && \
+            pip3 install pypolicyd-spf && \
+            pip3 install authres && \
+            # ユーザーがpython-policyd-spfを配置しなくてもデフォルトのディレクトリを配置
+            mv /etc/python-policyd-spf /usr/local/etc && \
+            ln -s /usr/local/etc/python-policyd-spf /etc/python-policyd-spf
 #             dpkg --configure -a -y && \
 # OpenDKIMの設定
 ENV         OPENDKIM_UID=113
