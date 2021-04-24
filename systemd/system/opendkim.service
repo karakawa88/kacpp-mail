@@ -8,6 +8,7 @@ Type=forking
 PIDFile=/var/run/opendkim/opendkim.pid
 ExecStart=/usr/sbin/opendkim -x /usr/local/etc/opendkim/opendkim.conf
 ExecReload=/bin/kill -USR1 $MAINPID
+ExecStartPost=chown opendkim.postfix /var/run/opendkim/opendkim.sock;chmod 660 /var/run/opendkim/opendkim.sock
 
 [Install]
 WantedBy=multi-user.target

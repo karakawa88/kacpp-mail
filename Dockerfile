@@ -134,9 +134,11 @@ ENV         OPENDKIM_GID=120
 ENV         OPENDKIM_USER=opendkim
 ENV         OPENDKIM_GROUP=opendkim
 # OpenDKIMはAPTで入れておりユーザーとグループopendkimは既に作成されているためコメントアウト
-#RUN         groupadd -g ${OPENDKIM_GID} ${OPENDKIM_GROUP} && \
-# RUN         useradd -r -u ${OPENDKIM_UID} -s /bin/false -d /dev/null \
-#                     -g ${OPENDKIM_GROUP} -G ${OPENDKIM_GROUP} ${OPENDKIM_USER} && \
+# RUN         groupdel ${OPENDKIM_GROUP} && \
+RUN         userdel ${OPENDKIM_USER} && \
+                groupadd -g ${OPENDKIM_GID} ${OPENDKIM_GROUP} && \
+                useradd -r -u ${OPENDKIM_UID} -s /bin/false -d /dev/null \
+                        -g ${OPENDKIM_GROUP} -G ${OPENDKIM_GROUP} ${OPENDKIM_USER}
 # /var/run/opendkimも既に作成されているためコメントアウト
 # RUN         mkdir /var/run/opendkim && \
 RUN         chown opendkim.postfix /var/run/opendkim && \
@@ -159,11 +161,13 @@ RUN         groupadd -g ${OPENDMARC_GID} ${OPENDMARC_GROUP} && \
 #                 cp supervisord.conf /etc && \
 #systemdの設定
 COPY        systemd/system/  /etc/systemd/system/
+COPY        tmpfiles.d/     /etc/tmpfiles.d/
 # ENTRYPOINTとクリーンアップ
 COPY        sh/system/mail-system.sh /usr/local/sh/system
 COPY        sh/mail/users_add.sh /usr/local/sh/mail
 RUN         chmod 775 /usr/local/sh/system/mail-system.sh && \
+            # なぜかSMTPサーバーexim4が入っておりそれが起動してpostfixの邪魔になるので削除
+            apt remove --purge -y exim4-daemon-light exim4-daemon-heavy && \
             cd ~/ && apt clean && rm -rf /var/lib/apt/lists/* && rm *
-COPY        rsyslog.conf /etc
 COPY        default.conf /etc/rsyslog.d
 ENTRYPOINT  ["/usr/local/sh/system/mail-system.sh"]
