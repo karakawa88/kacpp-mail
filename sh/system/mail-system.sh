@@ -10,7 +10,7 @@
 
 
 # ユーザーアカウントの作成
-if [[ -r /usr/local/etc/usres.txt ]]; then
+if [[ -r /usr/local/etc/users.txt ]]; then
     /usr/local/sh/mail/users_add.sh /usr/local/etc/users.txt
 fi
 
