@@ -106,7 +106,7 @@ COPY        sh/mail/ /usr/local/sh/mail
 # COPY        --from=builder /usr/local/var/spool/postfix/ /var/spool/postfix
 COPY        sh/  /usr/local/sh
 COPY        supervisord.conf /root
-COPY        .msmtprc /root
+# COPY        .msmtprc /root
 # https://letsencrypt.org/certs/lets-encrypt-r3-cross-signed.pem
 RUN         apt update && \
             # rsyslog
