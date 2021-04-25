@@ -50,6 +50,15 @@ ENV         OPENDMARC_URL=https://sourceforge.net/projects/opendmarc/files/${OPE
 ENV         OPENDMARC_DEST=${OPENDMARC_SRC}
 RUN         wget ${OPENDMARC_URL} && tar -zxvf ${OPENDMARC_SRC_FILE} && cd ${OPENDMARC_SRC} && \
             ./configure --prefix=/usr/local/${OPENDMARC_DEST} && make && make install
+# clamavのビルド
+ENV         CLAMAV_VERSION=0.103.2
+ENV         CLAMAV_SRC=clamav-${CLAMAV_VERSION}
+ENV         CLAMAV_SRC_FILE=${CLAMAV_SRC}.tar.gz
+ENV         CLAMAV_URL=https://www.clamav.net/downloads/production/${CLAMAV_SRC_FILE}
+ENV         CLAMAV_DEST=${CLAMAV_SRC}
+RUN         wget -O ${CLAMAV_SRC_FILE} ${CLAMAV_URL} && tar -zxvf ${CLAMAV_SRC_FILE} &&  \
+                cd ${CLAMAV_SRC} && ./configure --enable-milter --prefix=/usr/local/${CLAMAV_DEST} && \
+                make && make install
 # クリーンアップ
 RUN         /usr/local/sh/system/apt-install.sh uninstall gccdev.txt && \
                 apt autoremove -y && apt clean && rm -rf /var/lib/apt/lists/* && \
@@ -81,11 +90,19 @@ ENV         IDENT_TRUST_CERT=lets-encrypt-r3-cross-signed.pem
 # OpenDMARC環境変数
 ENV         OPENDMARC_VERSION=1.3.2
 ENV         OPENDMARC_DEST=opendmarc-${OPENDMARC_VERSION}
-RUN         mkdir /var/spool/postfix && mkdir /var/lib/postfix
+ENV         CLAMAV_VERSION=0.103.2
+ENV         CLAMAV_DEST=clamav-${CLAMAV_VERSION}
+RUN         mkdir /var/spool/postfix && mkdir /var/lib/postfix && \
+            mkdir /usr/local/sh/mail
 COPY        --from=builder /usr/local/${MSMTP_DEST}/ /usr/local
 COPY        --from=builder /usr/local/${POSTFIX_DEST}/usr/ /usr/local
 COPY        --from=builder /usr/local/${POSTFIX_DEST}/etc/ /usr/local/etc
 COPY        --from=builder /usr/local/${OPENDMARC_DEST}/ /usr/local/
+COPY        --from=builder /usr/local/${CLAMAV_DEST}/ /usr/local/
+COPY        systemd/system/  /etc/systemd/system/
+COPY        tmpfiles.d/     /etc/tmpfiles.d/
+COPY        sh/system/ /usr/local/sh/system
+COPY        sh/mail/ /usr/local/sh/mail
 # COPY        --from=builder /usr/local/var/spool/postfix/ /var/spool/postfix
 COPY        sh/  /usr/local/sh
 COPY        supervisord.conf /root
@@ -164,16 +181,27 @@ RUN         groupadd -g ${OPENDMARC_GID} ${OPENDMARC_GROUP} && \
                 chmod 3775 /var/run/opendmarc && \
                 mkdir /var/spool/opendmarc && chown opendmarc.opendmarc /var/spool/opendmarc && \
                 chmod 3775 /var/spool/opendmarc && ldconfig
+ENV         CLAMAV_UID=1005
+ENV         CLAMAV_GID=993
+ENV         CLAMAV_USER=clamav
+ENV         CLAMAV_GROUP=clamav
+RUN         groupadd -g ${CLAMAV_GID} ${CLAMAV_GROUP} && \
+                useradd -u ${CLAMAV_UID} -s /bin/false -d /dev/null \
+                    -g ${CLAMAV_GROUP} -G ${CLAMAV_GROUP} ${CLAMAV_USER} && \
+                mkdir /var/run/clamav && chown ${CLAMAV_USER}.${POSTFIX_USER} /var/run/clamav && \
+                    chmod 770 /var/run/clamav && \
+                mkdir /var/log/clamav && chown clamav.clamav /var/log/clamav && \
+                    chmod 770 /var/log/clamav && \
+                chown -R postfix.clamav /usr/local/sh/mail && \
+                    chmod 775 /usr/local/sh/mail && \
+                    chown clamav.clamav /usr/local/sh/mail/.clamavmsmtprc && \
+                    chmod 600 /usr/local/sh/mail/.clamavmsmtprc 
 # Supervisor 複数のプロセスを管理する
 # 複数のサービスを管理するためsupervisorを使用する
 # RUN         apt install -y supervisor && \
 #                 cp supervisord.conf /etc && \
 #systemdの設定
-COPY        systemd/system/  /etc/systemd/system/
-COPY        tmpfiles.d/     /etc/tmpfiles.d/
 # ENTRYPOINTとクリーンアップ
-COPY        sh/system/ /usr/local/sh/system
-COPY        sh/mail/ /usr/local/sh/mail
 RUN         chmod 775 /usr/local/sh/system/*.sh && \
             chmod 775 /usr/local/sh/mail/*.sh && \
             # なぜかSMTPサーバーexim4が入っておりそれが起動してpostfixの邪魔になるので削除

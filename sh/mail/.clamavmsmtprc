@@ -1,0 +1,27 @@
+defaults
+tls on
+auth on
+logfile /var/log/mail/msmtp.log
+syslog LOG_MAIL
+
+account karakawa
+tls_starttls on
+host mail.kacpp.xyz
+port 587
+from karakawa@kacpp.xyz
+auth on
+user kaawsadmin@kacpp.xyz
+password karakawa@5688;sasl:kacpp,+
+#passwordeval gpg --no-tty -q -d ~/.gnupg/karakawa_sasl_password.gpg
+
+account kagalpan
+tls_starttls on
+host mail.kacpp.xyz
+port 587
+from kagalpan@kacpp.xyz
+auth on
+user kaawsdev@kacpp.xyz
+password  kagalpan@5675;sasl:kacpp 
+#passwordeval gpg --no-tty -q -d ~/.gnupg/kagalpan_sasl_password.gpg
+
+
