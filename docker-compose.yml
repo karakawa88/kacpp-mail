@@ -13,9 +13,9 @@ services:
         networks:
             - kaawsnet
         ports:
-            - 25:25
-            - 465:465
-            - 587:587
+            - "25:25"
+            - "465:465"
+            - "587:587"
         cap_add:
             - SYS_ADMIN
         privileged: true

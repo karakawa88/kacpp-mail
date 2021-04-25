@@ -22,4 +22,7 @@ libdb5.3++-dev
 # OpenDMARC
 libmilter1.0.1
 libmilter-dev
-
+# clamav
+libcurl4
+libcurl4-gnutls-dev
+#libcurl4-openssl-dev
