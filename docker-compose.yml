@@ -4,8 +4,8 @@ version: "3"
 
 services:
     kacpp-mail:
-        image: kagalpandh/kacpp-mail
-        container_name: kacpp-mail
+        image: kagalpandh/kacpp-smtp
+        container_name: kacpp-smtp
         volumes:
             - /home/local_etc:/usr/local/etc
             - /home:/home/mail_users

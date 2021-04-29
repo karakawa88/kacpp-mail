@@ -99,13 +99,13 @@ COPY        --from=builder /usr/local/${POSTFIX_DEST}/usr/ /usr/local
 COPY        --from=builder /usr/local/${POSTFIX_DEST}/etc/ /usr/local/etc
 COPY        --from=builder /usr/local/${OPENDMARC_DEST}/ /usr/local/
 COPY        --from=builder /usr/local/${CLAMAV_DEST}/ /usr/local/
-COPY        systemd/system/  /etc/systemd/system/
-COPY        tmpfiles.d/     /etc/tmpfiles.d/
+COPY        /etc/systemd/system/  /etc/systemd/system/
+COPY        /etc/tmpfiles.d/     /etc/tmpfiles.d/
 COPY        sh/system/ /usr/local/sh/system
 COPY        sh/mail/ /usr/local/sh/mail
 # COPY        --from=builder /usr/local/var/spool/postfix/ /var/spool/postfix
 COPY        sh/  /usr/local/sh
-COPY        supervisord.conf /root
+# COPY        supervisord.conf /root
 # COPY        .msmtprc /root
 # https://letsencrypt.org/certs/lets-encrypt-r3-cross-signed.pem
 RUN         apt update && \
@@ -194,8 +194,6 @@ RUN         groupadd -g ${CLAMAV_GID} ${CLAMAV_GROUP} && \
                     chmod 770 /var/log/clamav && \
                 chown -R postfix.clamav /usr/local/sh/mail && \
                     chmod 775 /usr/local/sh/mail && \
-                    chown clamav.clamav /usr/local/sh/mail/.clamavmsmtprc && \
-                    chmod 600 /usr/local/sh/mail/.clamavmsmtprc 
                     chown clamav.clamav /usr/local/sh/mail/infected_message_handler.sh && \
                     chmod 775 /usr/local/sh/mail/infected_message_handler.sh
 # Supervisor 複数のプロセスを管理する
@@ -209,5 +207,6 @@ RUN         chmod 775 /usr/local/sh/system/*.sh && \
             # なぜかSMTPサーバーexim4が入っておりそれが起動してpostfixの邪魔になるので削除
             apt remove --purge -y exim4-daemon-light exim4-daemon-heavy && \
             cd ~/ && apt clean && rm -rf /var/lib/apt/lists/* && rm *
-COPY        default.conf /etc/rsyslog.d
+COPY        etc/rsyslog.conf /etc
+COPY        etc/rsyslog.d/ /etc/rsyslog.d
 ENTRYPOINT  ["/usr/local/sh/system/mail-system.sh"]
