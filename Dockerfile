@@ -196,6 +196,8 @@ RUN         groupadd -g ${CLAMAV_GID} ${CLAMAV_GROUP} && \
                     chmod 775 /usr/local/sh/mail && \
                     chown clamav.clamav /usr/local/sh/mail/.clamavmsmtprc && \
                     chmod 600 /usr/local/sh/mail/.clamavmsmtprc 
+                    chown clamav.clamav /usr/local/sh/mail/infected_message_handler.sh && \
+                    chmod 775 /usr/local/sh/mail/infected_message_handler.sh
 # Supervisor 複数のプロセスを管理する
 # 複数のサービスを管理するためsupervisorを使用する
 # RUN         apt install -y supervisor && \
