@@ -19,6 +19,7 @@ COPY        sh/apt-install/mail-system-dev.txt /usr/local/sh/apt-install
 # 開発環境インストール
 RUN         apt update && \
             /usr/local/sh/system/apt-install.sh install gccdev.txt && \
+            /usr/local/sh/system/apt-install.sh install mail-system-dev.txt && \
             # msmtpビルド
             # ./configure --prefix=... && make && make install
             wget ${MSMTP_URL} && tar -Jxvf ${MSMTP_SRC_FILE} && cd ${MSMTP_SRC} && \
@@ -27,7 +28,6 @@ RUN         apt update && \
             # cyrus-saslビルド
             # ./configure
             # make && make install
-RUN         /usr/local/sh/system/apt-install.sh install mail-system-dev.txt
 # ftp://ftp.porcupine.org/mirrors/project-history/postfix/official/postfix-3.5.2.tar.gz
 # Postfixビルドとインストール
 ENV         POSTFIX_VERSION=3.5.2
@@ -60,8 +60,7 @@ RUN         wget -O ${CLAMAV_SRC_FILE} ${CLAMAV_URL} && tar -zxvf ${CLAMAV_SRC_F
                 cd ${CLAMAV_SRC} && ./configure --enable-milter --prefix=/usr/local/${CLAMAV_DEST} && \
                 make && make install
 # クリーンアップ
-RUN         /usr/local/sh/system/apt-install.sh uninstall gccdev.txt && \
-                apt autoremove -y && apt clean && rm -rf /var/lib/apt/lists/* && \
+RUN         apt autoremove -y && apt clean && rm -rf /var/lib/apt/lists/* && \
                 cd ../ && rm -rf ${MSMTP_SRC}*
 FROM        kagalpandh/kacpp-pydev
 SHELL       [ "/bin/bash", "-c" ]
@@ -99,10 +98,8 @@ COPY        --from=builder /usr/local/${POSTFIX_DEST}/usr/ /usr/local
 COPY        --from=builder /usr/local/${POSTFIX_DEST}/etc/ /usr/local/etc
 COPY        --from=builder /usr/local/${OPENDMARC_DEST}/ /usr/local/
 COPY        --from=builder /usr/local/${CLAMAV_DEST}/ /usr/local/
-COPY        /etc/systemd/system/  /etc/systemd/system/
-COPY        /etc/tmpfiles.d/     /etc/tmpfiles.d/
-COPY        sh/system/ /usr/local/sh/system
-COPY        sh/mail/ /usr/local/sh/mail
+#パッケージのインストールを先に行う
+# 設定ファイルのコピーの先にやらないと上書きされるかエラーでビルドできない
 # COPY        --from=builder /usr/local/var/spool/postfix/ /var/spool/postfix
 COPY        sh/  /usr/local/sh
 # COPY        supervisord.conf /root
@@ -114,10 +111,10 @@ RUN         apt update && \
                 useradd -u ${SYSLOG_UID} -s /bin/false -d /dev/null -g syslog -G syslog syslog && \
                 chown -R root.syslog /var/log && chmod 3775 /var/log && \
             mkdir /var/log/mail && chown root.mail /var/log/mail && chmod 3775 /var/log/mail && ldconfig && \
-            /usr/local/sh/system/apt-install.sh install mail-system.txt && \
 #             mkdir /home/mail_users && \
             chown root.mail /home/mail_users && \
-                chmod 3775 /home/mail_users
+                chmod 3775 /home/mail_users && \
+            /usr/local/sh/system/apt-install.sh install mail-system.txt
             # Postfixユーザー・グループ作成
 RUN         groupadd -g ${PF_GID} ${POSTFIX_GROUP} && groupadd -g ${PD_GID} ${POSTDROP} && \
                 useradd -u ${PF_UID} -s /bin/false -d /dev/null -g ${POSTFIX_GROUP} \
@@ -207,6 +204,16 @@ RUN         chmod 775 /usr/local/sh/system/*.sh && \
             # なぜかSMTPサーバーexim4が入っておりそれが起動してpostfixの邪魔になるので削除
             apt remove --purge -y exim4-daemon-light exim4-daemon-heavy && \
             cd ~/ && apt clean && rm -rf /var/lib/apt/lists/* && rm *
+# systemdやcron.dなどの設定ファイルはパッケージインストールの後に行うようにする
+# それによって上書きやエラーでビルドできないことを避けるため
+COPY        etc/systemd/system/  /etc/systemd/system/
+COPY        etc/tmpfiles.d/     /etc/tmpfiles.d/
+COPY        etc/logrotate.d/    /etc/logrotate.d
+COPY        etc/cron.d/    /etc/cron.d
 COPY        etc/rsyslog.conf /etc
 COPY        etc/rsyslog.d/ /etc/rsyslog.d
+# 設定ファイルのパーミッションと所有者の設定
+# logrotateとcron
+RUN         chown -R root.root /etc/logrotate.d && chmod 644 /etc/logrotate.d/* && \
+            chown -R root.root /etc/cron.d && chmod 644 /etc/cron.d/*
 ENTRYPOINT  ["/usr/local/sh/system/mail-system.sh"]

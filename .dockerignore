@@ -1,2 +1,7 @@
+.git
+.gitignore
+README.md
+docker-compose.yml
+LICENSE.txt
+*.log
 supervisord.conf
-

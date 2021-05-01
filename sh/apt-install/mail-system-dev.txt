@@ -15,6 +15,8 @@ libsasl2-modules
 libsasl2-modules-db
 libsasl2-modules-sql
 # Postfix
+libssl-dev
+pkg-config
 libdb5.3
 libdb5.3-dev
 libdb5.3++
