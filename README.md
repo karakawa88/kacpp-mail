@@ -153,10 +153,13 @@ clamav-milterはメールからウイルスを発見するとメールで送信�
 
 ## rsyslogとlogrotateとcron
 システムログのmailを使用するためrsyslogを使用している。
-もしmailファシリティのログをホストに転送したいなら
+デフォルトでは/var/log/mail.logにメールのログは送られる。
+環境変数MAIL_LOG_HOSTにIPアドレス・ホスト名を指定してホスト転送設定を指定できる。
+もしこの環境変数を使用しないならデフォルトの転送先(/var/log/mail.log)が使用される。
+またmailファシリティのログを手動でホストに転送したいなら
 /etc/rsyslog.d/default.confに以下のように設定する。
 mail.*info          @@ホストのIPアドレスとホスト名:ポート番号(514)
-でホストのrsyslogサーバーに転送できる。
+でホストのrsyslogサーバーにも転送できる。
 rsyslogを導入したためlogrotateもインストールしている。
 cronにはaptをアップデートさせている。
 

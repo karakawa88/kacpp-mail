@@ -20,6 +20,7 @@ services:
             - SYS_ADMIN
         privileged: true
         restart: always
+        env_file: kacpp-smtp.src
 #         environment:
 #             PGDATA: /home/data/db/pgdata
 networks:
