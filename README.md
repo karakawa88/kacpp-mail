@@ -4,8 +4,23 @@
 SMTPメールサーバーDockerイメージファイル。
 SMTPサーバーにpostfixをビルドしてインストールしている。
 SMTPサーバーに必要な各種サービスもインストールした。
-DKIMサーバーのopendkimやDMARCサーバーのopendmarcやメールウイルスチェックのclamav-milterや
-メールクライアントmsmtpやmailのログを取るためrsyslogなどがインストールされている。
+
+## SMTPサーバーpostfixと各種サービス
+SMTPサーバーpostfixとそれと連携して使用できるサービスをインストールしてある。
+またmailのログの出力のためrsyslogやメール送信プログラムmsmtpプログラムもインストールしてある。
+以下に使用できる機能。
+- DKIM
+    - OpenDKIMがインストール。
+- DMARC
+    - OpenDMARCがインストール。
+- clamav-milter
+    - メールウイルスチェック
+- python-policyd-spf
+    - SPFチェッカー
+- msmtp
+    - メールクライアント
+    - メールウイルスチェックでウイルスを発見した時にメールを送信できる。
+これら複数のサービスはsystemdで起動される。
 これらを全て起動して使用するには少し手順が必要である。
 これから順番に説明していこうと思う。
 
@@ -75,6 +90,58 @@ users.txtの書式
 そのためあらかじめユーザーをホスト側で用意し/home/mail_usersをマウントすることが推奨される。
 ちなみに手動でコンテナ側にユーザーのホームディレクトリを用意することもできる。
 
+## postfixと各種サービスの連携
+OpenDKIMとOpenDMARCとclamav-milterはmilterを使用してpostfixと連携させる必要がある。
+### ソケットファイルの使用
+ソケットファイルを使用する場合は所有者をサーバーの所有者に(opendkimサーバーならopendkimユーザー)そしてグループを
+postfixに読み書きさせるためにpostfixとして読み書きの権限を与える必要がある。
+OpenDKIMの場合は/usr/local/sh/mail/opendkim.shでopendkimのソケットファイルに権限を与えてソケットファイルを使用できるように
+してある。もしTCP/IPを使用したい場合は設定ファイルを変更する。
+OpenDMARCの場合はソケットファイルが自分では使用できなかったためTCP/IPでやり取りするようにしている。
+clamav-milterは以下のようにすればソケットファイルを使用できるようになる。
+clamav-milter.conf
+~~~
+# Default: no default
+MilterSocket /var/run/clamav/clamav-milter.sock
+#MilterSocket inet:7357
+# ソケットファイルのパーミッション
+MilterSocketMode 660
+# 停止時にソケットファイルを削除するか    
+FixStaleSocket yes
+~~~
+clamav-milterはホストで起動しているclamdで連携することが想定されており
+ウイルスチェックを実際行うのはclamdである。もしこのコンテナーでclamdを起動したいなら
+clamdの設定ファイルとsystemdの設定ファイルを用意する必要がある。
+### postfixでのmilter設定
+main.cf
+~~~
+smtpd_milters =
+    # OpenDKIM
+    unix:/var/run/opendkim/opendkim.sock,
+    # OpenDMARC
+    inet:127.0.0.1:8893,
+    # clamav-milter
+    unix:/var/run/clamav/clamav-milter.sock
+~~~
+### python-policyd-spf
+SPFチェッカーでrestrictionsでSPFチェックを行うことができる。
+main.cf
+~~~
+smtpd_sender_restrictions = 
+    check_sender_access hash:/usr/local/etc/postfix/sender_access
+    reject_non_fqdn_sender,
+    reject_unknown_sender_domain,
+    check_policy_service unix:private/policy-spf
+~~~
+master.cf
+~~~
+# ファイルの最後に追記
+policy-spf     unix  -       n       n       -       0       spawn
+  user=nobody argv=/usr/local/python/bin/python3 /usr/local/python/bin/policyd-spf /etc/python-policyd-spf/policyd-spf.conf
+~~~
+Pythonは/usr/local/pythonにインストールされている。
+/etc/python-policyd-spf/はリンクで設定ファイルは/usr/local/etc/python-policyd-spfに格納する必要がある。
+
 ## clamav-milterのメール発見時のメール送信
 clamav-milterはメールからウイルスを発見するとメールで送信する機能がある。
 これのメール送信は/usr/local/sh/mail/infected_message_handler.shが行う。
@@ -105,8 +172,6 @@ docker exec -i kacpp-smtp "/usr/local/sh/system/mail-system-init.sh"
 systemdを起動するため--privileged --cap-add=SYS_ADMINのオプション指定は必要である。
 systemctlがDockerfileで使用できないため各種サービスを起動する/usr/local/sh/system/mail-system-init.sh
 がある。もしも必要なサービスのみ起動したいなら手動で設定する。
-
-##構成
 
 ##ベースイメージ
 kagalpandh/kacpp-pydev
