@@ -86,11 +86,28 @@ ENV         PF_GID=996
 ENV         PD_GID=997
 ENV         PF_UID=1003
 ENV         IDENT_TRUST_CERT=lets-encrypt-r3-cross-signed.pem
+# OpenDKIM環境変数
+ENV         OPENDKIM_UID=113
+ENV         OPENDKIM_GID=120
+ENV         OPENDKIM_USER=opendkim
+ENV         OPENDKIM_GROUP=opendkim
 # OpenDMARC環境変数
 ENV         OPENDMARC_VERSION=1.3.2
 ENV         OPENDMARC_DEST=opendmarc-${OPENDMARC_VERSION}
+ENV         OPENDMARC_UID=1004
+ENV         OPENDMARC_GID=994
+ENV         OPENDMARC_USER=opendmarc
+ENV         OPENDMARC_GROUP=opendmarc
+# clamav-milter環境変数
 ENV         CLAMAV_VERSION=0.103.2
 ENV         CLAMAV_DEST=clamav-${CLAMAV_VERSION}
+ENV         CLAMAV_UID=1005
+ENV         CLAMAV_GID=993
+ENV         CLAMAV_USER=clamav
+ENV         CLAMAV_GROUP=clamav
+# postfixはビルドされたものをコピーするため/var/spool/postfixと
+# /var/lib/postfixディレクトリは作成されないので作成
+# ついでにメール用シェルスクリプトディレクトリ/usr/local/sh/mailディレクトリ作成
 RUN         mkdir /var/spool/postfix && mkdir /var/lib/postfix && \
             mkdir /usr/local/sh/mail
 COPY        --from=builder /usr/local/${MSMTP_DEST}/ /usr/local
@@ -114,9 +131,10 @@ RUN         apt update && \
 #             mkdir /home/mail_users && \
             chown root.mail /home/mail_users && \
                 chmod 3775 /home/mail_users && \
-            /usr/local/sh/system/apt-install.sh install mail-system.txt
+            /usr/local/sh/system/apt-install.sh install mail-system.txt && \
+            # Postfix配置と設定
             # Postfixユーザー・グループ作成
-RUN         groupadd -g ${PF_GID} ${POSTFIX_GROUP} && groupadd -g ${PD_GID} ${POSTDROP} && \
+            groupadd -g ${PF_GID} ${POSTFIX_GROUP} && groupadd -g ${PD_GID} ${POSTDROP} && \
                 useradd -u ${PF_UID} -s /bin/false -d /dev/null -g ${POSTFIX_GROUP} \
                     -G "${POSTFIX_GROUP},${POSTDROP}" ${POSTFIX_USER} && \
                 chown -R ${POSTFIX_USER}.${POSTFIX_GROUP} /var/spool/postfix && \
@@ -149,40 +167,29 @@ RUN         groupadd -g ${PF_GID} ${POSTFIX_GROUP} && groupadd -g ${PD_GID} ${PO
             pip3 install authres && \
             # ユーザーがpython-policyd-spfを配置しなくてもデフォルトのディレクトリを配置
             mv /etc/python-policyd-spf /usr/local/etc && \
-            ln -s /usr/local/etc/python-policyd-spf /etc/python-policyd-spf
-#             dpkg --configure -a -y && \
-# OpenDKIMの設定
-ENV         OPENDKIM_UID=113
-ENV         OPENDKIM_GID=120
-ENV         OPENDKIM_USER=opendkim
-ENV         OPENDKIM_GROUP=opendkim
-# OpenDKIMはAPTで入れておりユーザーとグループopendkimは既に作成されているためコメントアウト
-# RUN         groupdel ${OPENDKIM_GROUP} && \
-RUN         userdel ${OPENDKIM_USER} && \
+            ln -s /usr/local/etc/python-policyd-spf /etc/python-policyd-spf && \
+            # OpenDKIMの設定
+            # OpenDKIMはAPTで入れておりユーザーとグループopendkimは既に作成されているためコメントアウト
+            # RUN         groupdel ${OPENDKIM_GROUP} && \
+            userdel ${OPENDKIM_USER} && \
                 groupadd -g ${OPENDKIM_GID} ${OPENDKIM_GROUP} && \
                 useradd -r -u ${OPENDKIM_UID} -s /bin/false -d /dev/null \
-                        -g ${OPENDKIM_GROUP} -G ${OPENDKIM_GROUP} ${OPENDKIM_USER}
-# /var/run/opendkimも既に作成されているためコメントアウト
-# RUN         mkdir /var/run/opendkim && \
-RUN         chown opendkim.postfix /var/run/opendkim && \
-                chmod 3775 /var/run/opendkim
-# OpenDMARCの配置と設定
-ENV         OPENDMARC_UID=1004
-ENV         OPENDMARC_GID=994
-ENV         OPENDMARC_USER=opendmarc
-ENV         OPENDMARC_GROUP=opendmarc
-RUN         groupadd -g ${OPENDMARC_GID} ${OPENDMARC_GROUP} && \
+                        -g ${OPENDKIM_GROUP} -G ${OPENDKIM_GROUP} ${OPENDKIM_USER} && \
+            # /var/run/opendkimも既に作成されているためコメントアウト
+            # RUN         mkdir /var/run/opendkim && \
+            chown opendkim.postfix /var/run/opendkim && \
+                chmod 3775 /var/run/opendkim && \
+            # OpenDMARCの配置と設定
+            groupadd -g ${OPENDMARC_GID} ${OPENDMARC_GROUP} && \
                 useradd -u ${OPENDMARC_UID} -s /bin/false -d /dev/null \
                     -g ${OPENDMARC_GROUP} -G ${OPENDMARC_GROUP} ${OPENDMARC_USER} && \
                 mkdir /var/run/opendmarc && chown opendmarc.postfix /var/run/opendmarc && \
                 chmod 3775 /var/run/opendmarc && \
                 mkdir /var/spool/opendmarc && chown opendmarc.opendmarc /var/spool/opendmarc && \
-                chmod 3775 /var/spool/opendmarc && ldconfig
-ENV         CLAMAV_UID=1005
-ENV         CLAMAV_GID=993
-ENV         CLAMAV_USER=clamav
-ENV         CLAMAV_GROUP=clamav
-RUN         groupadd -g ${CLAMAV_GID} ${CLAMAV_GROUP} && \
+                chmod 3775 /var/spool/opendmarc && ldconfig && \
+            # clamav-milter
+            # clamavユーザーグループ作成とディレクトリの配置
+            groupadd -g ${CLAMAV_GID} ${CLAMAV_GROUP} && \
                 useradd -u ${CLAMAV_UID} -s /bin/false -d /dev/null \
                     -g ${CLAMAV_GROUP} -G ${CLAMAV_GROUP} ${CLAMAV_USER} && \
                 mkdir /var/run/clamav && chown ${CLAMAV_USER}.${POSTFIX_USER} /var/run/clamav && \
@@ -192,14 +199,14 @@ RUN         groupadd -g ${CLAMAV_GID} ${CLAMAV_GROUP} && \
                 chown -R postfix.clamav /usr/local/sh/mail && \
                     chmod 775 /usr/local/sh/mail && \
                     chown clamav.clamav /usr/local/sh/mail/infected_message_handler.sh && \
-                    chmod 775 /usr/local/sh/mail/infected_message_handler.sh
-# Supervisor 複数のプロセスを管理する
-# 複数のサービスを管理するためsupervisorを使用する
-# RUN         apt install -y supervisor && \
-#                 cp supervisord.conf /etc && \
-#systemdの設定
-# ENTRYPOINTとクリーンアップ
-RUN         chmod 775 /usr/local/sh/system/*.sh && \
+                    chmod 775 /usr/local/sh/mail/infected_message_handler.sh && \
+            # Supervisor 複数のプロセスを管理する
+            # 複数のサービスを管理するためsupervisorを使用する
+            # RUN         apt install -y supervisor && \
+            #                 cp supervisord.conf /etc && \
+            #systemdの設定
+            # ENTRYPOINTとクリーンアップ
+            chmod 775 /usr/local/sh/system/*.sh && \
             chmod 775 /usr/local/sh/mail/*.sh && \
             # なぜかSMTPサーバーexim4が入っておりそれが起動してpostfixの邪魔になるので削除
             apt remove --purge -y exim4-daemon-light exim4-daemon-heavy && \
