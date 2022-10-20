@@ -65,7 +65,7 @@ ENV         OPENDMARC_DEST=${OPENDMARC_SRC}
 RUN         wget ${OPENDMARC_URL} && tar -zxvf ${OPENDMARC_SRC_FILE} && cd ${OPENDMARC_SRC} && \
             ./configure --prefix=/usr/local/${OPENDMARC_DEST} && make && make install
 # clamavのビルド
-ENV         CLAMAV_VERSION=0.103.2
+ENV         CLAMAV_VERSION=0.105.1
 ENV         CLAMAV_SRC=clamav-${CLAMAV_VERSION}
 ENV         CLAMAV_SRC_FILE=${CLAMAV_SRC}.tar.gz
 ENV         CLAMAV_URL=https://www.clamav.net/downloads/production/${CLAMAV_SRC_FILE}
