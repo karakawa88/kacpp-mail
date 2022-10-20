@@ -16,12 +16,14 @@ ENV         MSMTP_DEST=${MSMTP_SRC}
 # ENV         CYRUS_SRC_FILE=${CYRUS_SRC}.tar.gz
 # ENV         CYRUS_URL="https://github.com/cyrusimap/cyrus-sasl/archive/refs/tags/${CYRUS_SRC_FILE}"
 # ENV         CYRUS_DEST=${CYRUS_SRC}
-COPY        sh/apt-install/mail-system-dev.txt /usr/local/sh/apt-install
+COPY        sh/     /usr/local
 # https://github.com/cyrusimap/cyrus-sasl/archive/refs/tags/cyrus-sasl-2.1.27.zip
 # 開発環境インストール
 RUN         apt update && \
             /usr/local/sh/system/apt-install.sh install gccdev.txt && \
             /usr/local/sh/system/apt-install.sh install mail-system-dev.txt && \
+            pip3 install $(cat /usr/local/sh/pip-install/* |\
+                grep -v -E '(^#.*$)|(^[ \t]*$)' | uniq | xargs) && \
             # msmtp
             # GPG Sign
             wget ${MSMTP_GPG_PUB_KEY_URL} && \
@@ -70,7 +72,11 @@ ENV         CLAMAV_SRC=clamav-${CLAMAV_VERSION}
 ENV         CLAMAV_SRC_FILE=${CLAMAV_SRC}.tar.gz
 ENV         CLAMAV_URL=https://www.clamav.net/downloads/production/${CLAMAV_SRC_FILE}
 ENV         CLAMAV_DEST=${CLAMAV_SRC}
-RUN         wget -O ${CLAMAV_SRC_FILE} ${CLAMAV_URL} && tar -zxvf ${CLAMAV_SRC_FILE} &&  \
+RUN         python3 sh/python/fetch_gpg_pub_key.py >clamav.pub && \
+            gpg --import clamav.pub && \
+            wget ${CLAMAV_URL}.sig && wget -O ${CLAMAV_SRC_FILE} ${CLAMAV_URL} && \
+            gpg --verify ${CLAMAV_SRC_FILE}.sig ${CLAMAV_SRC_FILE} && \
+            tar -zxvf ${CLAMAV_SRC_FILE} &&  \
                 cd ${CLAMAV_SRC} && ./configure --enable-milter --prefix=/usr/local/${CLAMAV_DEST} && \
                 make && make install
 # クリーンアップ
@@ -83,13 +89,13 @@ USER        root
 EXPOSE      25 587 465 2525
 VOLUME      ["/home/mail_users", "/usr/local/etc"]
 # メールクライアントMSMTP用環境変数
-ENV         MSMTP_VERSION=1.8.15
+ENV         MSMTP_VERSION=1.8.22
 ENV         MSMTP_DEST=msmtp-${MSMTP_VERSION}
 # rsyslog用環境変数
 ENV         SYSLOG_GID=110
 ENV         SYSLOG_UID=104
 # Postfix用環境変数
-ENV         POSTFIX_VERSION=3.5.2
+ENV         POSTFIX_VERSION=3.7.3
 ENV         POSTFIX_SRC=postfix-${POSTFIX_VERSION}
 ENV         POSTFIX_DEST=${POSTFIX_SRC}
 # Postfix用ユーザー・グループ
@@ -113,7 +119,7 @@ ENV         OPENDMARC_GID=994
 ENV         OPENDMARC_USER=opendmarc
 ENV         OPENDMARC_GROUP=opendmarc
 # clamav-milter環境変数
-ENV         CLAMAV_VERSION=0.103.2
+ENV         CLAMAV_VERSION=0.105.1
 ENV         CLAMAV_DEST=clamav-${CLAMAV_VERSION}
 ENV         CLAMAV_UID=1005
 ENV         CLAMAV_GID=993
@@ -215,10 +221,6 @@ RUN         apt update && \
                     chmod 775 /usr/local/sh/mail && \
                     chown clamav.clamav /usr/local/sh/mail/infected_message_handler.sh && \
                     chmod 775 /usr/local/sh/mail/infected_message_handler.sh && \
-            # Supervisor 複数のプロセスを管理する
-            # 複数のサービスを管理するためsupervisorを使用する
-            # RUN         apt install -y supervisor && \
-            #                 cp supervisord.conf /etc && \
             #systemdの設定
             # ENTRYPOINTとクリーンアップ
             chmod 775 /usr/local/sh/system/*.sh && \
