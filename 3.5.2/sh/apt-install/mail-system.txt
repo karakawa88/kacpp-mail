@@ -1,0 +1,28 @@
+#systemd
+systemd
+# rsyslog
+rsyslog
+# PostgreSQL
+libpq5
+libpqxx-6.2
+# MySQL
+default-mysql-client
+# Cyrus-SASL
+libsasl2-2
+libsasl2-modules
+libsasl2-modules-db
+libsasl2-modules-sql
+# saslauthd
+sasl2-bin
+# Postfix
+libdb5.3
+libdb5.3++
+# SSL CA証明書
+ca-certificates
+# OpenDKIM
+libmilter1.0.1
+opendkim
+opendkim-tools
+# clamav
+libcurl4
+libltdl7

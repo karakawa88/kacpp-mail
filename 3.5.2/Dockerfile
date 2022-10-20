@@ -1,37 +1,28 @@
 # PstgreSQL環境を持つdebianイメージ
 # 日本語化も設定済み
-FROM        kagalpandh/kacpp-gccdev AS builder
+FROM        kagalpandh/kacpp-gccdev:8 AS builder
 SHELL       [ "/bin/bash", "-c" ]
 WORKDIR     /root
 ENV         DEBIAN_FORONTEND=noninteractive
-ENV         MSMTP_VERSION=1.8.22
+ENV         MSMTP_VERSION=1.8.15
 ENV         MSMTP_SRC=msmtp-${MSMTP_VERSION}
 ENV         MSMTP_SRC_FILE=${MSMTP_SRC}.tar.xz
-ENV         MSMTP_GPG_PUB_KEY="key.txt"
-ENV         MSMTP_GPG_PUB_KEY_URL="https://marlam.de/${MSMTP_GPG_PUB_KEY}"
 ENV         MSMTP_URL="https://marlam.de/msmtp/releases/${MSMTP_SRC_FILE}"
 ENV         MSMTP_DEST=${MSMTP_SRC}
-# ENV         CYRUS_VERSION=2.1.27
-# ENV         CYRUS_SRC=cyrus-sasl-${CYRUS_VERSION}
-# ENV         CYRUS_SRC_FILE=${CYRUS_SRC}.tar.gz
-# ENV         CYRUS_URL="https://github.com/cyrusimap/cyrus-sasl/archive/refs/tags/${CYRUS_SRC_FILE}"
-# ENV         CYRUS_DEST=${CYRUS_SRC}
+ENV         CYRUS_VERSION=2.1.27
+ENV         CYRUS_SRC=cyrus-sasl-${CYRUS_VERSION}
+ENV         CYRUS_SRC_FILE=${CYRUS_SRC}.tar.gz
+ENV         CYRUS_URL="https://github.com/cyrusimap/cyrus-sasl/archive/refs/tags/${CYRUS_SRC_FILE}"
+ENV         CYRUS_DEST=${CYRUS_SRC}
 COPY        sh/apt-install/mail-system-dev.txt /usr/local/sh/apt-install
 # https://github.com/cyrusimap/cyrus-sasl/archive/refs/tags/cyrus-sasl-2.1.27.zip
 # 開発環境インストール
 RUN         apt update && \
             /usr/local/sh/system/apt-install.sh install gccdev.txt && \
             /usr/local/sh/system/apt-install.sh install mail-system-dev.txt && \
-            # msmtp
-            # GPG Sign
-            wget ${MSMTP_GPG_PUB_KEY_URL} && \
-            gpg --import ${MSMTP_GPG_PUB_KEY} && \
-            # msmstp download
-            wget ${MSMTP_URL} && wget ${MSMTP_URL}.sig && \
-            gpg --verify ${MSMTP_SRC_FILE}.sig ${MSMTP_SRC_FILE} && \
             # msmtpビルド
             # ./configure --prefix=... && make && make install
-            tar -Jxvf ${MSMTP_SRC_FILE} && cd ${MSMTP_SRC} && \
+            wget ${MSMTP_URL} && tar -Jxvf ${MSMTP_SRC_FILE} && cd ${MSMTP_SRC} && \
                 ./configure --prefix=/usr/local/${MSMTP_DEST} && \
                 make && make install
             # cyrus-saslビルド
@@ -39,17 +30,12 @@ RUN         apt update && \
             # make && make install
 # ftp://ftp.porcupine.org/mirrors/project-history/postfix/official/postfix-3.5.2.tar.gz
 # Postfixビルドとインストール
-ENV         POSTFIX_VERSION=3.7.3
-ENV         POSTFIX_GPG_PUB_KEY="wietse.pgp"
-ENV         POSTFIX_GPG_PUB_URL="https://ghostarchive.org/postfix/postfix-release/${POSTFIX_GPG_PUB_KEY}"
+ENV         POSTFIX_VERSION=3.5.2
 ENV         POSTFIX_SRC=postfix-${POSTFIX_VERSION}
 ENV         POSTFIX_SRC_FILE=${POSTFIX_SRC}.tar.gz
 ENV         POSTFIX_URL="ftp://ftp.porcupine.org/mirrors/project-history/postfix/official/${POSTFIX_SRC_FILE}"
 ENV         POSTFIX_DEST=${POSTFIX_SRC}
-RUN         wget ${POSTFIX_GPG_PUB_URL} && gpg --import ${GPG_PUB_KEY} && \
-            wget ${POSTFIX_URL} && wget ${POSTFIX_URL}.gpg2 &&\
-            gpg2 --verify ${POSTFIX_SRC_FILE}.gpg2 ${POSTFIX_SRC_FILE} && \
-            tar -zxvf ${POSTFIX_SRC_FILE} && cd ${POSTFIX_SRC} && \
+RUN         wget ${POSTFIX_URL} && tar -zxvf ${POSTFIX_SRC_FILE} && cd ${POSTFIX_SRC} && \
                 make makefiles CCARGS="-DUSE_TLS -DUSE_SASL_AUTH -DUSE_CYRUS_SASL -I/usr/include/sasl" \
                 AUXLIBS="-L/usr/local/lib -lsasl2 -lssl -lcrypto" && \
                 make && \
@@ -76,7 +62,7 @@ RUN         wget -O ${CLAMAV_SRC_FILE} ${CLAMAV_URL} && tar -zxvf ${CLAMAV_SRC_F
 # クリーンアップ
 RUN         apt autoremove -y && apt clean && rm -rf /var/lib/apt/lists/* && \
                 cd ../ && rm -rf ${MSMTP_SRC}*
-FROM        kagalpandh/kacpp-pydev
+FROM        kagalpandh/kacpp-pydev:3.9.5
 SHELL       [ "/bin/bash", "-c" ]
 WORKDIR     /root
 USER        root

@@ -1,0 +1,55 @@
+/var/log/syslog.log
+/var/log/auth.log
+/var/log/local0.log
+/var/log/local1.log
+{
+	rotate 7
+	weekly
+	missingok
+	notifempty
+	delaycompress
+	compress
+	copytruncate
+	su root root
+	size 6M
+	postrotate
+		/usr/lib/rsyslog/rsyslog-rotate
+	endscript
+}
+
+#/var/log/mail.info
+#/var/log/mail.warn
+/var/log/mail.log
+/var/log/mail.err
+{
+	rotate 7
+	weekly
+	missingok
+	notifempty
+	delaycompress
+	compress
+	copytruncate
+	su syslog root
+	size 30M
+	postrotate
+		/usr/lib/rsyslog/rsyslog-rotate
+	endscript
+}
+
+/var/log/debug.log
+/var/log/messages
+{
+	rotate 7
+	weekly
+	missingok
+	notifempty
+	delaycompress
+	compress
+	copytruncate
+	su root root
+	size 20M
+	postrotate
+		/usr/lib/rsyslog/rsyslog-rotate
+	endscript
+}
+
