@@ -5,6 +5,22 @@ SMTPメールサーバーDockerイメージファイル。
 SMTPサーバーにpostfixをビルドしてインストールしている。
 SMTPサーバーに必要な各種サービスもインストールした。
 
+## バージョン
+postfix   3.7.3
+
+## 使い方
+```shell
+docker image pull kagalpandh/kacpp-smtp
+docker run -dit --name kacpp-smtp -p 25:25 -p 465:465 -p 587:587 \
+    --privileged --cap-add=SYS_ADMIN -v /sys/fs/cgroup:/sys/fs/cgroup:ro \
+    -v  /home/local_etc:/usr/local/etc -v /home:/home/mail_users kagalpandh/kacpp-smtp
+#各種サービス起動
+docker exec -i kacpp-smtp "/usr/local/sh/system/mail-system-init.sh"
+```
+systemdを起動するため--privileged --cap-add=SYS_ADMINのオプション指定は必要である。
+systemctlがDockerfileで使用できないため各種サービスを起動する/usr/local/sh/system/mail-system-init.sh
+がある。もしも必要なサービスのみ起動したいなら手動で設定する。
+
 ## SMTPサーバーpostfixと各種サービス
 SMTPサーバーpostfixとそれと連携して使用できるサービスをインストールしてある。
 またmailのログの出力のためrsyslogやメール送信プログラムmsmtpプログラムもインストールしてある。
@@ -79,7 +95,7 @@ clamav-milter
 
 ## メールユーザーの追加
 メールユーザーは/usr/local/sh/mailのusers_add.shシェルスクリプトで簡単に追加できる。
-このシェルスクリプトは引数か/usr/local/etc/usrs.txtからユーザー情報を読み込みユーザー追加を行う。
+このシェルスクリプトは引数か/usr/local/etc/postfix/users.txtからユーザー情報を読み込みユーザー追加を行う。
 このファイルをコンテナー起動前など上のディレクトリにusers.txtとして配置すれば自動で追加できる。
 既存のシステムにメールユーザーを追加する場合はこのファイルにユーザー情報を追記しておけばよい。
 users.txtの書式
@@ -163,23 +179,11 @@ mail.*info          @@ホストのIPアドレスとホスト名:ポート番号(
 rsyslogを導入したためlogrotateもインストールしている。
 cronにはaptをアップデートさせている。
 
-## 使い方
-```shell
-docker image pull kagalpandh/kacpp-smtp
-docker run -dit --name kacpp-smtp -p 25:25 -p 465:465 -p 587:587 \
-    --privileged --cap-add=SYS_ADMIN -v /sys/fs/cgroup:/sys/fs/cgroup:ro \
-    -v  /home/local_etc:/usr/local/etc -v /home:/home/mail_users kagalpandh/kacpp-smtp
-#各種サービス起動
-docker exec -i kacpp-smtp "/usr/local/sh/system/mail-system-init.sh"
-```
-systemdを起動するため--privileged --cap-add=SYS_ADMINのオプション指定は必要である。
-systemctlがDockerfileで使用できないため各種サービスを起動する/usr/local/sh/system/mail-system-init.sh
-がある。もしも必要なサービスのみ起動したいなら手動で設定する。
 
 ##ベースイメージ
 kagalpandh/kacpp-pydev
 
 # その他
-DockerHub: [kagalpandh/kacpp-postgres](https://hub.docker.com/repository/docker/kagalpandh/kacpp-smtp)<br />
-GitHub: [karakawa88/kacpp-postgres](https://github.com/karakawa88/kacpp-smtp)
+DockerHub: [kagalpandh/kacpp-smtp](https://hub.docker.com/repository/docker/kagalpandh/kacpp-smtp)<br />
+GitHub: [karakawa88/kacpp-smtp](https://github.com/karakawa88/kacpp-smtp)
 
