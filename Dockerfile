@@ -16,7 +16,7 @@ ENV         MSMTP_DEST=${MSMTP_SRC}
 # ENV         CYRUS_SRC_FILE=${CYRUS_SRC}.tar.gz
 # ENV         CYRUS_URL="https://github.com/cyrusimap/cyrus-sasl/archive/refs/tags/${CYRUS_SRC_FILE}"
 # ENV         CYRUS_DEST=${CYRUS_SRC}
-COPY        sh/     /usr/local
+COPY        sh/     /usr/local/sh
 # https://github.com/cyrusimap/cyrus-sasl/archive/refs/tags/cyrus-sasl-2.1.27.zip
 # 開発環境インストール
 RUN         apt update && \
@@ -46,11 +46,11 @@ ENV         POSTFIX_GPG_PUB_KEY="wietse.pgp"
 ENV         POSTFIX_GPG_PUB_URL="https://ghostarchive.org/postfix/postfix-release/${POSTFIX_GPG_PUB_KEY}"
 ENV         POSTFIX_SRC=postfix-${POSTFIX_VERSION}
 ENV         POSTFIX_SRC_FILE=${POSTFIX_SRC}.tar.gz
-ENV         POSTFIX_URL="ftp://ftp.porcupine.org/mirrors/project-history/postfix/official/${POSTFIX_SRC_FILE}"
+ENV         POSTFIX_URL="https://ghostarchive.org/postfix/postfix-release/official/${POSTFIX_SRC_FILE}"
 ENV         POSTFIX_DEST=${POSTFIX_SRC}
-RUN         wget ${POSTFIX_GPG_PUB_URL} && gpg --import ${GPG_PUB_KEY} && \
-            wget ${POSTFIX_URL} && wget ${POSTFIX_URL}.gpg2 &&\
-            gpg2 --verify ${POSTFIX_SRC_FILE}.gpg2 ${POSTFIX_SRC_FILE} && \
+RUN         wget ${POSTFIX_GPG_PUB_URL} && gpg --import ${POSTFIX_GPG_PUB_KEY} && \
+            wget ${POSTFIX_URL} && wget ${POSTFIX_URL}.gpg2 && \
+            gpg --verify ${POSTFIX_SRC_FILE}.gpg2 ${POSTFIX_SRC_FILE} && \
             tar -zxvf ${POSTFIX_SRC_FILE} && cd ${POSTFIX_SRC} && \
                 make makefiles CCARGS="-DUSE_TLS -DUSE_SASL_AUTH -DUSE_CYRUS_SASL -I/usr/include/sasl" \
                 AUXLIBS="-L/usr/local/lib -lsasl2 -lssl -lcrypto" && \
@@ -72,13 +72,22 @@ ENV         CLAMAV_SRC=clamav-${CLAMAV_VERSION}
 ENV         CLAMAV_SRC_FILE=${CLAMAV_SRC}.tar.gz
 ENV         CLAMAV_URL=https://www.clamav.net/downloads/production/${CLAMAV_SRC_FILE}
 ENV         CLAMAV_DEST=${CLAMAV_SRC}
-RUN         python3 sh/python/fetch_gpg_pub_key.py >clamav.pub && \
-            gpg --import clamav.pub && \
-            wget ${CLAMAV_URL}.sig && wget -O ${CLAMAV_SRC_FILE} ${CLAMAV_URL} && \
-            gpg --verify ${CLAMAV_SRC_FILE}.sig ${CLAMAV_SRC_FILE} && \
-            tar -zxvf ${CLAMAV_SRC_FILE} &&  \
-                cd ${CLAMAV_SRC} && ./configure --enable-milter --prefix=/usr/local/${CLAMAV_DEST} && \
-                make && make install
+#RUN        python3 /usr/local/sh/python/fetch_gpg_pub_key.py \
+#                 "http://www.clamav.net/downloads#collapsePGP" \
+#                 "#collapsePGP pre" >clamav.pub && \
+#             gpg --import clamav.pub && \
+#             wget -O ${CLAMAV_SRC_FILE}.sig  ${CLAMAV_URL}.sig && wget -O ${CLAMAV_SRC_FILE} ${CLAMAV_URL} && \
+#             gpg --verify ${CLAMAV_SRC_FILE}.sig ${CLAMAV_SRC_FILE} && \
+#             tar -zxvf ${CLAMAV_SRC_FILE} &&  \
+#                 cd ${CLAMAV_SRC} && mkdir build && cd build && \
+#                 cmake .. \
+#                     -D CMAKE_INSTALL_PREFIX=/usr/local/${CLAMAV_DEST} \
+#                     -D DATABASE_DIRECTORY=/var/lib/clamav \
+#                 -D ENABLE_JSON_SHARED=OFF &&\
+#                 cmake --build . && \
+#                 ctest && \
+#                 cmake --build . --target install
+RUN         apt install -y clamav-milter
 # クリーンアップ
 RUN         apt autoremove -y && apt clean && rm -rf /var/lib/apt/lists/* && \
                 cd ../ && rm -rf ${MSMTP_SRC}*
@@ -134,7 +143,7 @@ COPY        --from=builder /usr/local/${MSMTP_DEST}/ /usr/local
 COPY        --from=builder /usr/local/${POSTFIX_DEST}/usr/ /usr/local
 COPY        --from=builder /usr/local/${POSTFIX_DEST}/etc/ /usr/local/etc
 COPY        --from=builder /usr/local/${OPENDMARC_DEST}/ /usr/local/
-COPY        --from=builder /usr/local/${CLAMAV_DEST}/ /usr/local/
+# COPY        --from=builder /usr/local/${CLAMAV_DEST}/ /usr/local/
 #パッケージのインストールを先に行う
 # 設定ファイルのコピーの先にやらないと上書きされるかエラーでビルドできない
 # COPY        --from=builder /usr/local/var/spool/postfix/ /var/spool/postfix
@@ -210,6 +219,7 @@ RUN         apt update && \
                 chmod 3775 /var/spool/opendmarc && ldconfig && \
             # clamav-milter
             # clamavユーザーグループ作成とディレクトリの配置
+#             groupdel clamav && userdel clamav && \
             groupadd -g ${CLAMAV_GID} ${CLAMAV_GROUP} && \
                 useradd -u ${CLAMAV_UID} -s /bin/false -d /dev/null \
                     -g ${CLAMAV_GROUP} -G ${CLAMAV_GROUP} ${CLAMAV_USER} && \

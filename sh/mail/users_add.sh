@@ -11,7 +11,7 @@ sh="/bin/sh"
 if [[ $# != 0 ]]; then
     USERS_LIST=$1
 else
-    USERS_LIST="/usr/local/etc/users.txt"
+    USERS_LIST="/usr/local/etc/postfix/users.txt"
 fi
 
 # cat - <<EOS >users.txt

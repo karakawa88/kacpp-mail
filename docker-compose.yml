@@ -29,13 +29,13 @@ services:
         cap_add:
             - SYS_ADMIN
         privileged: true
-        tmpfs:
-            - /tmp
-            - /run
-            - /run/lock
+#         tmpfs:
+#             - /tmp
+#             - /run
+#             - /run/lock
 #         cgroup-parent: docker.slice 
 #         cgroupns: private
-        restart: always
+#         restart: no
         env_file: kacpp-smtp.src
 #         environment:
 #             PGDATA: /home/data/db/pgdata

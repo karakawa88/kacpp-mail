@@ -4,7 +4,7 @@ systemd
 rsyslog
 # PostgreSQL
 libpq5
-libpqxx-6.2
+libpqxx-6.4
 # MySQL
 default-mysql-client
 # Cyrus-SASL
@@ -17,6 +17,7 @@ sasl2-bin
 # Postfix
 libdb5.3
 libdb5.3++
+libicu67
 # SSL CA証明書
 ca-certificates
 # OpenDKIM
