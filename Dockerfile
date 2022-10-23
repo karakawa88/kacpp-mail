@@ -72,25 +72,28 @@ ENV         CLAMAV_SRC=clamav-${CLAMAV_VERSION}
 ENV         CLAMAV_SRC_FILE=${CLAMAV_SRC}.tar.gz
 ENV         CLAMAV_URL=https://www.clamav.net/downloads/production/${CLAMAV_SRC_FILE}
 ENV         CLAMAV_DEST=${CLAMAV_SRC}
-#RUN        python3 /usr/local/sh/python/fetch_gpg_pub_key.py \
-#                 "http://www.clamav.net/downloads#collapsePGP" \
-#                 "#collapsePGP pre" >clamav.pub && \
-#             gpg --import clamav.pub && \
-#             wget -O ${CLAMAV_SRC_FILE}.sig  ${CLAMAV_URL}.sig && wget -O ${CLAMAV_SRC_FILE} ${CLAMAV_URL} && \
-#             gpg --verify ${CLAMAV_SRC_FILE}.sig ${CLAMAV_SRC_FILE} && \
-#             tar -zxvf ${CLAMAV_SRC_FILE} &&  \
-#                 cd ${CLAMAV_SRC} && mkdir build && cd build && \
-#                 cmake .. \
-#                     -D CMAKE_INSTALL_PREFIX=/usr/local/${CLAMAV_DEST} \
-#                     -D DATABASE_DIRECTORY=/var/lib/clamav \
-#                 -D ENABLE_JSON_SHARED=OFF &&\
-#                 cmake --build . && \
-#                 ctest && \
-#                 cmake --build . --target install
-RUN         apt install -y clamav-milter
+RUN         apt install -y curl && \
+            cd ~/ && curl "https://sh.rustup.rs" -sSf >rustup.sh && \
+            chmod 775 rustup.sh && ./rustup.sh -y && \
+            source ~/.cargo/env && \
+            python3 /usr/local/sh/python/fetch_gpg_pub_key.py \
+                "http://www.clamav.net/downloads#collapsePGP" \
+                "#collapsePGP pre" >clamav.pub && \
+            gpg --import clamav.pub && \
+            wget -O ${CLAMAV_SRC_FILE}.sig  ${CLAMAV_URL}.sig && wget -O ${CLAMAV_SRC_FILE} ${CLAMAV_URL} && \
+            gpg --verify ${CLAMAV_SRC_FILE}.sig ${CLAMAV_SRC_FILE} && \
+            tar -zxvf ${CLAMAV_SRC_FILE} &&  \
+                cd ${CLAMAV_SRC} && mkdir build && cd build && \
+                cmake .. \
+                    -D CMAKE_INSTALL_PREFIX=/usr/local/${CLAMAV_DEST} \
+                    -D DATABASE_DIRECTORY=/var/lib/clamav \
+                -D ENABLE_JSON_SHARED=OFF &&\
+                cmake --build . && \
+                ctest && \
+                cmake --build . --target install
+# RUN         apt install -y clamav-milter
 # クリーンアップ
-RUN         apt autoremove -y && apt clean && rm -rf /var/lib/apt/lists/* && \
-                cd ../ && rm -rf ${MSMTP_SRC}*
+RUN         apt autoremove -y && apt clean && rm -rf /var/lib/apt/lists/*
 FROM        kagalpandh/kacpp-pydev
 SHELL       [ "/bin/bash", "-c" ]
 WORKDIR     /root
@@ -143,7 +146,7 @@ COPY        --from=builder /usr/local/${MSMTP_DEST}/ /usr/local
 COPY        --from=builder /usr/local/${POSTFIX_DEST}/usr/ /usr/local
 COPY        --from=builder /usr/local/${POSTFIX_DEST}/etc/ /usr/local/etc
 COPY        --from=builder /usr/local/${OPENDMARC_DEST}/ /usr/local/
-# COPY        --from=builder /usr/local/${CLAMAV_DEST}/ /usr/local/
+COPY        --from=builder /usr/local/${CLAMAV_DEST}/ /usr/local/
 #パッケージのインストールを先に行う
 # 設定ファイルのコピーの先にやらないと上書きされるかエラーでビルドできない
 # COPY        --from=builder /usr/local/var/spool/postfix/ /var/spool/postfix
