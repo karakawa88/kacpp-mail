@@ -27,3 +27,5 @@ opendkim-tools
 # clamav
 libcurl4
 libltdl7
+libxml2
+
