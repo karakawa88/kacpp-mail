@@ -19,6 +19,13 @@ systemctl start opendkim
 systemctl start opendmarc
 systemctl start clamav-milter
 systemctl start postfix
+if [[ "$MAILDIR_BACKUP" == "TRUE" ]]
+then
+    systemctl enable user-maildir-backup.service
+    systemctl enable user-maildir-backup.timer
+    systemctl start user-maildir-backup.service
+    systemctl start user-maildir-backup.timer
+fi
 
 exit 0
 

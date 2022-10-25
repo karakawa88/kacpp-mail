@@ -18,6 +18,7 @@ services:
         volumes:
             - /home/local_etc:/usr/local/etc
             - /home:/home/mail_users
+            - /home/data/backup:/dest
 #             - /sys/fs/cgroup:/sys/fs/cgroup:rw
         networks:
             kaawsnet:

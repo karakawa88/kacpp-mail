@@ -232,8 +232,8 @@ RUN         apt update && \
                     chmod 770 /var/log/clamav && \
                 chown -R postfix.clamav /usr/local/sh/mail && \
                     chmod 775 /usr/local/sh/mail && \
-                    chown clamav.clamav /usr/local/sh/mail/infected_message_handler.sh && \
-                    chmod 775 /usr/local/sh/mail/infected_message_handler.sh && \
+#                     chown clamav.clamav /usr/local/sh/mail/infected_message_handler.sh && \
+#                     chmod 775 /usr/local/sh/mail/infected_message_handler.sh && \
             #systemdの設定
             # ENTRYPOINTとクリーンアップ
             chmod 775 /usr/local/sh/system/*.sh && \
