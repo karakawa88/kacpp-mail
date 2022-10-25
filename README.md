@@ -179,6 +179,17 @@ mail.*info          @@ホストのIPアドレスとホスト名:ポート番号(
 rsyslogを導入したためlogrotateもインストールしている。
 cronにはaptをアップデートさせている。
 
+## ユーザーのMaildirのバックアップ
+ユーザーのメールディレクトリ(~/Maildir)を自動でバックアップできる。
+それにはDockerコンテナーに環境変数MAILDIR_BACKUPにTRUEを設定する。
+これを設定するとタイマーにバックアップ処理が追加される。
+そしてバックアップ先として/destをbindマウントする。
+バックアップファイル名はusers-mail-backup.tar.xzである。
+もしこの環境変数を設定しない場合はタイマーに登録されずにバックアップは実行されない。
+###それぞれのファイル
+バックアップスクリプト:     /usr/local/sh/mail/users-mail-backup.sh
+タイマー:                   /etc/systemd/system/user-maildir-backup.timer
+サービス:                   /etc/systemd/system/user-maildir-backup.service
 
 ##ベースイメージ
 kagalpandh/kacpp-pydev
